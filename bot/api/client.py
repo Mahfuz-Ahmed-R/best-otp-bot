@@ -9,16 +9,28 @@ def _api_ok(payload: dict) -> bool:
     return meta.get("code") == 200 or meta.get("status") == "ok"
 
 
+def _api_error_payload(payload: dict | None, fallback: str) -> dict:
+    payload = payload or {}
+    meta = payload.get("meta") or {}
+    return {
+        "error": payload.get("message") or fallback,
+        "error_code": meta.get("code"),
+        "error_status": meta.get("status"),
+    }
+
+
 async def fetch_number(rid: str) -> dict | None:
     """Allocate a number from the panel API."""
     try:
         response = await client_async.post(API_ENDPOINTS["getnum"], json={"rid": rid})
+        try:
+            data = response.json()
+        except Exception:
+            data = {}
         if response.status_code != 200:
-            return None
-
-        data = response.json()
+            return _api_error_payload(data, f"HTTP {response.status_code} from getnum")
         if not _api_ok(data):
-            return None
+            return _api_error_payload(data, "getnum request failed")
 
         info = data.get("data") or {}
         number = (
@@ -40,7 +52,10 @@ async def fetch_number(rid: str) -> dict | None:
         }
     except Exception as exc:
         print(f"fetch_number error ({rid}): {exc}")
-        return None
+        return {
+            "error": "provider connection failed",
+            "error_detail": str(exc),
+        }
 
 
 async def fetch_live_services() -> list[dict[str, Any]]:

@@ -15,46 +15,87 @@ def _range_to_item(range_text: str) -> dict:
     }
 
 
+def _normalize_range_item(item) -> dict | None:
+    if isinstance(item, str):
+        return _range_to_item(item)
+    if isinstance(item, dict):
+        range_text = str(item.get("range", "")).strip()
+        if not range_text:
+            return None
+        country = str(item.get("country", "")).strip()
+        if not country:
+            return _range_to_item(range_text)
+        return {"range": range_text, "country": country}
+    return None
+
+
 def _normalize_api_service(svc: dict) -> dict:
-    sid = svc.get("sid", "Service")
-    raw_ranges = svc.get("ranges", [])
+    sid = str(svc.get("sid", "Service")).strip()
     ranges = []
-    for item in raw_ranges:
-        if isinstance(item, str):
-            ranges.append(_range_to_item(item))
-        elif isinstance(item, dict):
-            ranges.append(item)
+    for item in svc.get("ranges", []):
+        normalized = _normalize_range_item(item)
+        if normalized:
+            ranges.append(normalized)
+    return {"sid": sid, "ranges": ranges}
+
+
+def _normalize_custom_service(svc: dict) -> dict | None:
+    sid = str(svc.get("sid", "")).strip()
+    if not sid:
+        return None
+
+    ranges = []
+    seen = set()
+    for item in svc.get("ranges", []):
+        normalized = _normalize_range_item(item)
+        if not normalized:
+            continue
+        range_key = normalized["range"].upper()
+        if range_key in seen:
+            continue
+        seen.add(range_key)
+        ranges.append(normalized)
+
     return {"sid": sid, "ranges": ranges}
 
 
 async def get_available_services() -> list[dict]:
-    """Merge live API services with admin custom services."""
-    live = await fetch_live_services()
-    services = [_normalize_api_service(s) for s in live]
+    """Load services for users, preferring admin-configured ranges per service."""
+    live_services = [
+        _normalize_api_service(service)
+        for service in await fetch_live_services()
+        if service.get("sid")
+    ]
 
-    custom = load_custom_services()
-    if not isinstance(custom, list):
-        custom = []
+    custom_raw = load_custom_services()
+    if not isinstance(custom_raw, list):
+        custom_raw = []
+    custom_services = [
+        service
+        for service in (_normalize_custom_service(item) for item in custom_raw)
+        if service
+    ]
 
-    by_sid = {s.get("sid", "").upper(): s for s in services}
-    for svc in custom:
-        sid = svc.get("sid", "").upper()
-        if not sid:
-            continue
-        if sid in by_sid:
-            existing_ranges = {r.get("range", "").upper() for r in by_sid[sid].get("ranges", [])}
-            for r in svc.get("ranges", []):
-                rv = r.get("range", "").upper() if isinstance(r, dict) else str(r).upper()
-                if rv and rv not in existing_ranges:
-                    by_sid[sid]["ranges"].append(r if isinstance(r, dict) else _range_to_item(r))
+    if not live_services and not custom_services:
+        return []
+
+    by_sid = {service["sid"].upper(): service for service in live_services}
+    ordered_sids = [service["sid"].upper() for service in live_services]
+
+    for service in custom_services:
+        sid_key = service["sid"].upper()
+        if sid_key not in ordered_sids:
+            ordered_sids.append(sid_key)
+        if service["ranges"]:
+            by_sid[sid_key] = service
         else:
-            normalized = {
-                "sid": svc.get("sid"),
-                "ranges": [
-                    r if isinstance(r, dict) else _range_to_item(r)
-                    for r in svc.get("ranges", [])
-                ],
-            }
-            by_sid[sid] = normalized
+            by_sid.setdefault(sid_key, service)
 
-    return list(by_sid.values())
+    final_services = []
+    for sid_key in ordered_sids:
+        service = by_sid.get(sid_key)
+        if not service or not service.get("ranges"):
+            continue
+        final_services.append(service)
+
+    return final_services

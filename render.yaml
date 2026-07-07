@@ -20,3 +20,7 @@ services:
         sync: false
       - key: API_BASE_URL
         value: https://api.2oo9.cloud/MXS47FLFX0U/tness/@public/api
+      - key: MAUTHAPI_KEY
+        sync: false
+      - key: OTP_SOURCE_CHANNEL_ID
+        sync: false

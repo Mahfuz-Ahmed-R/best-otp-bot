@@ -8,14 +8,14 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes
 
 from bot.admin.callbacks import handle_admin_callback
-from bot.config import ACTIVITY_LOGS_FILE, MIN_WITHDRAW, OTP_GROUP_LINK, USER_DATA_FILE
+from bot.config import ACTIVITY_LOGS_FILE, MIN_WITHDRAW, USER_DATA_FILE
 from bot.handlers.withdraw import (
     admin_approve_withdraw,
     admin_reject_withdraw,
     process_withdraw_cancel,
     process_withdraw_confirm,
 )
-from bot.services.numbers import fast_allocate_number_multi, process_numbers
+from bot.services.numbers import fast_allocate_number_multi
 from bot.services.stats import get_user_stats
 from bot.state import last_range
 from bot.utils.country import clean_country_display, get_country_info
@@ -84,12 +84,27 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         keyboard = build_countries_keyboard(ranges, idx)
         await query.message.edit_text(
-            f"📞 <b>GET NUMBER</b>\n\n"
-            f"<blockquote>📱 Service: <b>{html.escape(sid)}</b></blockquote>\n"
-            f"<blockquote>🌍 আপনার পছন্দের <b>Country</b> সিলেক্ট করুন:</blockquote>",
+            f"📍 Select a country for <b>{html.escape(sid.upper())}</b>:",
             parse_mode="HTML",
             reply_markup=keyboard,
         )
+        return
+
+    if data in ("noop", "noop_service"):
+        return
+
+    if data == "close_services":
+        try:
+            await query.message.delete()
+        except Exception:
+            await query.message.edit_reply_markup(reply_markup=None)
+        return
+
+    if data == "close_numbers":
+        try:
+            await query.message.delete()
+        except Exception:
+            await query.message.edit_reply_markup(reply_markup=None)
         return
 
     if data.startswith("rng_"):
@@ -121,7 +136,49 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 all_country_ranges.append(r_item.get("range", ""))
 
         sid = context.user_data.get("la_sid", "")
+        context.user_data["la_country_ranges"] = all_country_ranges
         asyncio.create_task(fast_allocate_number_multi(query, context, all_country_ranges, sid))
+        return
+
+    if data == "refresh_numbers":
+        ranges = context.user_data.get("la_country_ranges", [])
+        sid = context.user_data.get("la_sid", "")
+        if not ranges:
+            r_text = last_range.get(uid)
+            if r_text:
+                ranges = [r_text]
+        if not ranges:
+            await query.answer("No country selected. Please choose again.", show_alert=True)
+            return
+        asyncio.create_task(fast_allocate_number_multi(query, context, ranges, sid))
+        return
+
+    if data == "back_countries":
+        svc_idx = context.user_data.get("la_svc_idx")
+        ranges = context.user_data.get("la_ranges", [])
+        sid = context.user_data.get("la_sid", "Service")
+        if svc_idx is None or not ranges:
+            from bot.services.service_loader import get_available_services
+
+            services = await get_available_services()
+            if not services:
+                await query.message.edit_text("❌ Could not load services.")
+                return
+            context.user_data["la_services"] = services
+            keyboard = build_services_keyboard(services)
+            await query.message.edit_text(
+                "📍 Select a service:",
+                parse_mode="HTML",
+                reply_markup=keyboard,
+            )
+            return
+
+        keyboard = build_countries_keyboard(ranges, svc_idx)
+        await query.message.edit_text(
+            f"📍 Select a country for <b>{html.escape(sid.upper())}</b>:",
+            parse_mode="HTML",
+            reply_markup=keyboard,
+        )
         return
 
     if data == "back_services":
@@ -134,25 +191,10 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["la_services"] = services
         keyboard = build_services_keyboard(services)
         await query.message.edit_text(
-            "📞 <b>GET NUMBER</b>\n\n"
-            "<blockquote>📱 নিচ থেকে একটি <b>Service</b> সিলেক্ট করুন:</blockquote>",
+            "📍 Select a service:",
             parse_mode="HTML",
             reply_markup=keyboard,
         )
-        return
-
-    if data == "same_range":
-        r_text = last_range.get(uid)
-        if r_text:
-            try:
-                await query.message.edit_reply_markup(
-                    reply_markup=InlineKeyboardMarkup([
-                        [InlineKeyboardButton("📢 OTP GROUP", url=OTP_GROUP_LINK, style="primary")],
-                    ])
-                )
-            except Exception:
-                pass
-            await process_numbers(update, context, r_text, 1)
         return
 
     if data == "withdraw_start":

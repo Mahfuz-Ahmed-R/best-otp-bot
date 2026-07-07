@@ -21,7 +21,7 @@ from bot.admin.keyboards import (
     build_manage_services_inline_keyboard,
     get_admin_panel_text,
 )
-from bot.config import BOT_NAME, SUPPORT_LINK, USER_DATA_FILE
+from bot.config import BOT_NAME, OTP_GROUP_LINK, SUPPORT_LINK, USER_DATA_FILE
 from bot.handlers.commands.leaderboard import leaderboard_command
 from bot.handlers.commands.profile import profile_command
 from bot.handlers.commands.refer import refer_command
@@ -324,17 +324,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await show_app_selection(update, context)
         return
 
-    if "LEADERBOARD" in text:
+    if "TRAFFIC" in text:
         await leaderboard_command(update, context)
+        return
+
+    if "2FA" in text:
+        keyboard = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔐 2FA ONLINE", url=OTP_GROUP_LINK, style="primary")],
+        ])
+        await update.message.reply_text(
+            "🔐 <b>2FA ONLINE</b>\n\nJoin the OTP group for live 2FA codes:",
+            reply_markup=keyboard,
+            parse_mode="HTML",
+        )
         return
 
     if "SUPPORT" in text:
         support_text = (
-            f"💬 <b>{BOT_NAME}</b> SUPPORT 🎧\n\n"
-            "CLICK THE BUTTON BELOW TO CONTACT SUPPORT"
+            f"👥 <b>{BOT_NAME}</b> SUPPORT\n\n"
+            "Tap below to contact support:"
         )
         keyboard = InlineKeyboardMarkup([
-            [InlineKeyboardButton("💬 SUPPORT", url=SUPPORT_LINK, style="primary")],
+            [InlineKeyboardButton("👥 SUPPORT", url=SUPPORT_LINK, style="primary")],
         ])
         await update.message.reply_text(support_text, reply_markup=keyboard, parse_mode="HTML")
         return

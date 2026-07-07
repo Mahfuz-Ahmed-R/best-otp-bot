@@ -10,6 +10,6 @@ def is_state_cancelling_input(text_input: str) -> bool:
     cancelling = [
         "USER MANAGEMENT", "SYSTEM CONFIGURATION", "MANAGE SERVICES",
         "BACK TO MAIN", "ADMIN PANEL", "GET NUMBER", "BALANCE",
-        "REFER AND EARN", "PROFILE", "LEADERBOARD", "SUPPORT", "CANCEL",
+        "TRAFFIC", "2FA ONLINE", "SUPPORT", "PROFILE", "REFER AND EARN", "CANCEL",
     ]
     return any(k in clean_text for k in cancelling)

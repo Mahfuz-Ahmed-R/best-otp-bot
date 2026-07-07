@@ -95,8 +95,16 @@ async def withdraw_number_received(update: Update, context: ContextTypes.DEFAULT
         parse_mode="HTML",
         reply_markup=InlineKeyboardMarkup([
             [
-                InlineKeyboardButton("❌ CANCEL", callback_data="withdraw_cancel"),
-                InlineKeyboardButton("✅ CONFIRM", callback_data="withdraw_confirm"),
+                InlineKeyboardButton(
+                    "❌ CANCEL",
+                    callback_data="withdraw_cancel",
+                    style="danger",
+                ),
+                InlineKeyboardButton(
+                    "✅ CONFIRM",
+                    callback_data="withdraw_confirm",
+                    style="success",
+                ),
             ]
         ]),
     )

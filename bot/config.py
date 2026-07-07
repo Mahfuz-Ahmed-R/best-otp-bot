@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,13 +18,44 @@ API_BASE_URL = os.getenv(
     "https://api.2oo9.cloud/MXS47FLFX0U/tness/@public/api",
 )
 
+
+def _default_mauthapi_key() -> str:
+    match = re.search(r"api\.2oo9\.cloud/([^/]+)/", API_BASE_URL)
+    return match.group(1) if match else ""
+
+
+def _normalize_mauthapi_key(raw: str) -> str:
+    """Accept a bare key or a full panel API URL pasted by mistake."""
+    value = raw.strip()
+    if not value:
+        return _default_mauthapi_key()
+    match = re.search(r"api\.2oo9\.cloud/([^/]+)/", value)
+    if match:
+        return match.group(1)
+    return value
+
+
+def _env_int(name: str, default: int = 0) -> int | None:
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return None if default == 0 else default
+    try:
+        value = int(raw)
+    except ValueError:
+        return None
+    return value or None
+
+
+MAUTHAPI_KEY = _normalize_mauthapi_key(os.getenv("MAUTHAPI_KEY", ""))
+
 ADMIN_IDS = [
     int(x.strip())
     for x in os.getenv("ADMIN_IDS", "").split(",")
     if x.strip().isdigit()
 ]
 
-OTP_GROUP_ID = int(os.getenv("OTP_GROUP_ID", "0")) or None
+OTP_GROUP_ID = _env_int("OTP_GROUP_ID")
+OTP_SOURCE_CHANNEL_ID = _env_int("OTP_SOURCE_CHANNEL_ID") or OTP_GROUP_ID
 SUPPORT_LINK = os.getenv("SUPPORT_LINK", "https://t.me/your_support")
 OTP_GROUP_LINK = os.getenv("OTP_GROUP_LINK", SUPPORT_LINK)
 
