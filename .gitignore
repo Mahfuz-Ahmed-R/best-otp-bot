@@ -1,0 +1,23 @@
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Runtime data
+data/*.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+Thumbs.db
+desktop.ini
+
+# Legacy monolith (optional keep locally)
+# bot (3).py
