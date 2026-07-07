@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: best-otp-bot
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: BOT_TOKEN
+        sync: false
+      - key: ADMIN_IDS
+        sync: false
+      - key: SUPPORT_LINK
+        sync: false
+      - key: OTP_GROUP_LINK
+        sync: false
+      - key: OTP_GROUP_ID
+        sync: false
+      - key: API_BASE_URL
+        value: https://api.2oo9.cloud/MXS47FLFX0U/tness/@public/api
