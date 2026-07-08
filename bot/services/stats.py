@@ -96,15 +96,31 @@ def get_user_stats(uid):
     }
 
 
-def log_global_activity(uid, action, details):
+def _load_activity_logs():
     if not os.path.exists(ACTIVITY_LOGS_FILE):
         with open(ACTIVITY_LOGS_FILE, "w", encoding="utf-8") as f:
             json.dump([], f)
+        return []
+
     try:
         with open(ACTIVITY_LOGS_FILE, "r", encoding="utf-8") as f:
-            logs = json.load(f)
+            data = json.load(f)
     except (json.JSONDecodeError, OSError):
-        logs = []
+        return []
+
+    if isinstance(data, list):
+        return data
+
+    return []
+
+
+def _save_activity_logs(logs):
+    with open(ACTIVITY_LOGS_FILE, "w", encoding="utf-8") as f:
+        json.dump(logs, f, indent=4)
+
+
+def log_global_activity(uid, action, details):
+    logs = _load_activity_logs()
     now = get_bangladesh_time()
     logs.append({
         "uid": str(uid),
@@ -114,8 +130,7 @@ def log_global_activity(uid, action, details):
         "date": now.strftime("%d/%m/%Y"),
         "time": now.strftime("%H:%M:%S"),
     })
-    with open(ACTIVITY_LOGS_FILE, "w", encoding="utf-8") as f:
-        json.dump(logs, f, indent=4)
+    _save_activity_logs(logs)
 
 
 def get_global_system_stats():

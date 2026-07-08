@@ -1,6 +1,5 @@
 import re
 
-from bot.api.client import fetch_live_services
 from bot.utils.country import get_country_info
 from bot.utils.helpers import load_custom_services
 
@@ -60,42 +59,15 @@ def _normalize_custom_service(svc: dict) -> dict | None:
 
 
 async def get_available_services() -> list[dict]:
-    """Load services for users, preferring admin-configured ranges per service."""
-    live_services = [
-        _normalize_api_service(service)
-        for service in await fetch_live_services()
-        if service.get("sid")
-    ]
-
+    """Return only the admin-managed services that should be shown to users."""
     custom_raw = load_custom_services()
     if not isinstance(custom_raw, list):
         custom_raw = []
+
     custom_services = [
         service
         for service in (_normalize_custom_service(item) for item in custom_raw)
-        if service
+        if service and service.get("ranges")
     ]
 
-    if not live_services and not custom_services:
-        return []
-
-    by_sid = {service["sid"].upper(): service for service in live_services}
-    ordered_sids = [service["sid"].upper() for service in live_services]
-
-    for service in custom_services:
-        sid_key = service["sid"].upper()
-        if sid_key not in ordered_sids:
-            ordered_sids.append(sid_key)
-        if service["ranges"]:
-            by_sid[sid_key] = service
-        else:
-            by_sid.setdefault(sid_key, service)
-
-    final_services = []
-    for sid_key in ordered_sids:
-        service = by_sid.get(sid_key)
-        if not service or not service.get("ranges"):
-            continue
-        final_services.append(service)
-
-    return final_services
+    return custom_services

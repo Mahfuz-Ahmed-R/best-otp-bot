@@ -57,7 +57,7 @@ ADMIN_IDS = [
 OTP_GROUP_ID = _env_int("OTP_GROUP_ID")
 OTP_SOURCE_CHANNEL_ID = _env_int("OTP_SOURCE_CHANNEL_ID") or OTP_GROUP_ID
 SUPPORT_LINK = os.getenv("SUPPORT_LINK", "https://t.me/your_support")
-OTP_GROUP_LINK = os.getenv("OTP_GROUP_LINK", SUPPORT_LINK)
+OTP_GROUP_LINK = os.getenv("OTP_GROUP_LINK", "https://t.me/BestOTP07")
 
 USER_DATA_FILE = str(DATA_DIR / "users.json")
 PAID_SMS_FILE = str(DATA_DIR / "paid_sms.json")

@@ -20,17 +20,9 @@ from bot.services.numbers import worker
 
 
 async def post_init(application):
-    from bot.api.client import fetch_live_services
-    from bot.config import MAUTHAPI_KEY, OTP_SOURCE_CHANNEL_ID
+    from bot.config import OTP_SOURCE_CHANNEL_ID
 
-    if not MAUTHAPI_KEY:
-        print("WARNING: MAUTHAPI_KEY is not set. Panel API calls will fail.")
-    else:
-        services = await fetch_live_services()
-        if services:
-            print(f"Panel API OK — {len(services)} live service(s) loaded.")
-        else:
-            print("WARNING: Panel API returned no services. Check MAUTHAPI_KEY or add custom services in Admin Panel.")
+    print("INFO: Services are loaded from admin-managed custom services only.")
 
     if OTP_SOURCE_CHANNEL_ID:
         print(f"OTP channel listener enabled for chat ID: {OTP_SOURCE_CHANNEL_ID}")
